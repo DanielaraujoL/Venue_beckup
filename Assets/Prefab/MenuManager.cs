@@ -4,14 +4,6 @@ using UnityEngine.Audio;
 using UnityEngine.SceneManagement; // Necessário para gerenciar cenas e o Quit
 using UnityEngine.UI; // Necessário para Text e Image
 
-// Enums para o tipo de resultado da tela final
-public enum GameResult
-{
-    Promocao,
-    Excelente,
-    Miseravel,
-    Rebaixado
-}
 public class MenuManager : MonoBehaviour
 {
     // --- NOVO: Singleton Instance ---
@@ -24,18 +16,15 @@ public class MenuManager : MonoBehaviour
     public GameObject creditosPanel;
     public GameObject multiplayerMenuPanel;
     public GameObject hudDoJogoPanel;
+    public GameObject selectionSprite;
 
     [Header("Painéis de Estado do Jogo")]
     public GameObject pausePanel;
     public GameObject fundoConfigII;
 
-    [Header("Componentes Tela Final")]
-    public GameObject finalizadoPanel; // O painel base que contém tudo
-    public TextMeshProUGUI resultadoText; // Ou Text (Unity Engine)
-    public Image faixaImage; // A imagem da faixa que muda de cor
-
     [Header("Configurações de Áudio")]
     public AudioMixer mainMixer; // Arraste seu MainMixer aqui
+    public AudioMixer mainMixer2; // Arraste seu MainMixer aqui
 
     // Variáveis de estado
     private bool isMusicOn = true;
@@ -117,7 +106,6 @@ public class MenuManager : MonoBehaviour
         loginMenuPanel.SetActive(false);
         creditosPanel.SetActive(false);
         multiplayerMenuPanel.SetActive(false);
-        finalizadoPanel.SetActive(false);
 
         // Mostra HUD apenas
         hudDoJogoPanel.SetActive(true);
@@ -159,6 +147,7 @@ public class MenuManager : MonoBehaviour
     {
         DeactivateAllPanels();
         multiplayerMenuPanel.SetActive(true);
+        selectionSprite.SetActive(true);
     }
 
     // 4. HUD DO JOGO (Normalmente ativa com o carregamento da cena do jogo)
@@ -179,7 +168,6 @@ public class MenuManager : MonoBehaviour
         fundoConfigII.SetActive(false);
         hudDoJogoPanel.SetActive(false);
         // Opcional: Pausar o tempo do jogo
-        //Time.timeScale = 0f;
 
         isPaused = true;
         Debug.Log("Jogo Pausado. Pressione ESC para retomar.");
@@ -312,7 +300,7 @@ public class MenuManager : MonoBehaviour
         multiplayerMenuPanel.SetActive(false);
         hudDoJogoPanel.SetActive(false);
         pausePanel.SetActive(false);
-        finalizadoPanel.SetActive(false); // Se aplicável
+        selectionSprite.SetActive(false);
         // Certifique-se de que o tempo não está pausado se estivermos no menu principal
         Time.timeScale = 1f;
     }
@@ -343,44 +331,6 @@ public class MenuManager : MonoBehaviour
 #else
             Application.Quit();
 #endif
-    }
-
-    // --- Método para Mostrar a Tela Final ---
-    public void ShowFinalScreen(GameResult result)
-    {
-        DeactivateAllPanels();
-        finalizadoPanel.SetActive(true);
-
-        switch (result)
-        {
-            case GameResult.Promocao:
-                resultadoText.text = "PROMOÇÃO";
-                // Cor da Faixa (Exemplo: Verde)
-                faixaImage.color = new Color32(50, 200, 50, 255);
-                break;
-
-            case GameResult.Excelente:
-                resultadoText.text = "EXCELENTE!";
-                // Cor da Faixa (Exemplo: Amarelo/Ouro)
-                faixaImage.color = new Color32(255, 215, 0, 255);
-                break;
-
-            case GameResult.Miseravel:
-                resultadoText.text = "MISERÁVEL";
-                // Cor da Faixa (Exemplo: Laranja)
-                faixaImage.color = new Color32(255, 165, 0, 255);
-                break;
-
-            case GameResult.Rebaixado:
-                resultadoText.text = "REBAIXADO";
-                // Cor da Faixa (Exemplo: Vermelho)
-                faixaImage.color = new Color32(200, 50, 50, 255);
-                break;
-        }
-
-        // Opcional: Pausar o jogo se o HUD estiver ativo
-        Time.timeScale = 1f;
-        isPaused = false;
     }
 
     private void Update()

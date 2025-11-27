@@ -1,30 +1,36 @@
 ﻿using System.Collections;
-using Photon.Pun;
 using UnityEngine;
 
 public class PlayerSpriteController : MonoBehaviour
 {
-    [Header("Idle")]
-    public Sprite[] idleDown;
-    public Sprite[] idleUp;
-    public Sprite[] idleRight;
-    public Sprite[] idleLeft;
+    [System.Serializable]
+    public class CharacterSet
+    {
+        [Header("Idle")]
+        public Sprite[] idleDown;
+        public Sprite[] idleUp;
+        public Sprite[] idleRight;
+        public Sprite[] idleLeft;
 
-    [Header("Walk")]
-    public Sprite[] walkDown;
-    public Sprite[] walkUp;
-    public Sprite[] walkRight;
-    public Sprite[] walkLeft;
+        [Header("Walk")]
+        public Sprite[] walkDown;
+        public Sprite[] walkUp;
+        public Sprite[] walkRight;
+        public Sprite[] walkLeft;
 
-    [Header("Push (only right/left)")]
-    public Sprite[] pushRight;
-    public Sprite[] pushLeft;
+        [Header("Push")]
+        public Sprite[] pushRight;
+        public Sprite[] pushLeft;
 
-    [Header("Interact (only right/left)")]
-    public Sprite[] interactRight;
-    public Sprite[] interactLeft;
+        [Header("Interact")]
+        public Sprite[] interactRight;
+        public Sprite[] interactLeft;
+    }
 
-    [Header("Config")]
+    [Header("PERSONAGENS (10)")]
+    public CharacterSet[] personagens = new CharacterSet[10];
+
+    [Header("CONFIG")]
     public float tempoEntreFrames = 0.12f;
 
     private SpriteRenderer sr;
@@ -42,39 +48,28 @@ public class PlayerSpriteController : MonoBehaviour
     private Direcao direcaoAtual = Direcao.Down;
 
     private Vector2 movimentoInput;
-
-    private PhotonView view;
+    private int personagemAtual = 0;
 
     void Start()
     {
         sr = GetComponent<SpriteRenderer>();
         rb = GetComponent<Rigidbody2D>();
-        view = GetComponent<PhotonView>();
 
+        // Carrega personagem salvo
+        personagemAtual = PlayerPrefs.GetInt("PersonagemSelecionado", 0);
+
+        // Animação inicial
         SetAnimation(GetIdleArray(ultimaDirecao));
-
-        // 🟢 Força sincronização inicial (com leve atraso)
-        StartCoroutine(WaitForPhotonView());
     }
-
-    IEnumerator WaitForPhotonView()
-    {
-        // espera até o PhotonView estar pronto
-        yield return new WaitUntil(() => view != null && view.ViewID != 0 && view.IsMine);
-
-        // força sincronização inicial para todos os clientes
-        view.RPC(nameof(RPC_SyncAnim), RpcTarget.AllBuffered, (int)estado, (int)direcaoAtual);
-    }
-
 
     void Update()
     {
-        if (!view.IsMine) return;
-
+        // Movimento detectado
         float movX = Input.GetAxisRaw("Horizontal");
         float movY = Input.GetAxisRaw("Vertical");
         movimentoInput = new Vector2(movX, movY).normalized;
 
+        // Direção
         if (movimentoInput.magnitude > 0)
         {
             if (Mathf.Abs(movX) > Mathf.Abs(movY))
@@ -83,29 +78,25 @@ public class PlayerSpriteController : MonoBehaviour
                 direcaoAtual = movY > 0 ? Direcao.Up : Direcao.Down;
         }
 
+        // Estado atual
         Estado novoEstado =
             Input.GetKey(KeyCode.E) ? Estado.Interact :
             (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift)) ? Estado.Push :
             (movimentoInput.magnitude > 0) ? Estado.Walk :
             Estado.Idle;
 
+        // Se algo mudou → troca animação
         if (novoEstado != estado || direcaoAtual != ultimaDirecao)
         {
             estado = novoEstado;
             ultimaDirecao = direcaoAtual;
-            view.RPC(nameof(RPC_SyncAnim), RpcTarget.All, (int)estado, (int)direcaoAtual);
+
+            AtualizarAnimacaoPorEstado();   // 🔥 IMPORTANTE: antes estava comentado
         }
 
         AtualizarAnimacaoTempo();
     }
 
-    [PunRPC]
-    void RPC_SyncAnim(int estadoRPC, int direcaoRPC)
-    {
-        estado = (Estado)estadoRPC;
-        ultimaDirecao = (Direcao)direcaoRPC;
-        AtualizarAnimacaoPorEstado();
-    }
     private void AtualizarAnimacaoPorEstado()
     {
         frameAtual = 0;
@@ -116,14 +107,17 @@ public class PlayerSpriteController : MonoBehaviour
             case Estado.Idle:
                 SetAnimation(GetIdleArray(ultimaDirecao));
                 break;
+
             case Estado.Walk:
                 SetAnimation(GetWalkArray(ultimaDirecao));
                 break;
+
             case Estado.Push:
-                SetAnimation(ultimaDirecao == Direcao.Left ? pushLeft : pushRight);
+                SetAnimation(ultimaDirecao == Direcao.Left ? GetPushLeft() : GetPushRight());
                 break;
+
             case Estado.Interact:
-                SetAnimation(ultimaDirecao == Direcao.Left ? interactLeft : interactRight);
+                SetAnimation(ultimaDirecao == Direcao.Left ? GetInteractLeft() : GetInteractRight());
                 break;
         }
     }
@@ -141,11 +135,15 @@ public class PlayerSpriteController : MonoBehaviour
         if (animAtual == null || animAtual.Length == 0) return;
 
         contadorTempo += Time.deltaTime;
+
         if (contadorTempo >= tempoEntreFrames)
         {
             contadorTempo = 0f;
             frameAtual++;
-            if (frameAtual >= animAtual.Length) frameAtual = 0;
+
+            if (frameAtual >= animAtual.Length)
+                frameAtual = 0;
+
             sr.sprite = animAtual[frameAtual];
         }
     }
@@ -157,27 +155,53 @@ public class PlayerSpriteController : MonoBehaviour
         sr.sprite = animAtual[frameAtual];
     }
 
+    // -------- PERSONAGENS --------
+
+    private CharacterSet GetCurrentCharacter()
+    {
+        int idx = Mathf.Clamp(personagemAtual, 0, personagens.Length - 1);
+        return personagens[idx];
+    }
+
     private Sprite[] GetIdleArray(Direcao d)
     {
-        switch (d)
+        var c = GetCurrentCharacter();
+        return d switch
         {
-            case Direcao.Down: return idleDown;
-            case Direcao.Up: return idleUp;
-            case Direcao.Right: return idleRight;
-            case Direcao.Left: return idleLeft;
-            default: return idleDown;
-        }
+            Direcao.Down => c.idleDown,
+            Direcao.Up => c.idleUp,
+            Direcao.Right => c.idleRight,
+            Direcao.Left => c.idleLeft,
+            _ => c.idleDown
+        };
     }
 
     private Sprite[] GetWalkArray(Direcao d)
     {
-        switch (d)
+        var c = GetCurrentCharacter();
+        return d switch
         {
-            case Direcao.Down: return walkDown;
-            case Direcao.Up: return walkUp;
-            case Direcao.Right: return walkRight;
-            case Direcao.Left: return walkLeft;
-            default: return walkDown;
-        }
+            Direcao.Down => c.walkDown,
+            Direcao.Up => c.walkUp,
+            Direcao.Right => c.walkRight,
+            Direcao.Left => c.walkLeft,
+            _ => c.walkDown
+        };
+    }
+
+    private Sprite[] GetPushRight() => GetCurrentCharacter().pushRight;
+    private Sprite[] GetPushLeft() => GetCurrentCharacter().pushLeft;
+    private Sprite[] GetInteractRight() => GetCurrentCharacter().interactRight;
+    private Sprite[] GetInteractLeft() => GetCurrentCharacter().interactLeft;
+
+    // Manual selection
+    public void DefinirPersonagem(int index)
+    {
+        personagemAtual = Mathf.Clamp(index, 0, personagens.Length - 1);
+
+        PlayerPrefs.SetInt("PersonagemSelecionado", personagemAtual);
+        PlayerPrefs.Save();
+
+        AtualizarAnimacaoPorEstado();
     }
 }

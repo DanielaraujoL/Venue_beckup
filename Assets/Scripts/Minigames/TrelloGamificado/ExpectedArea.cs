@@ -14,46 +14,52 @@ public class ExpectedArea : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        CardController cardController = collision.GetComponent<CardController>();
-        Debug.Log($"cardController{cardController.status}");
-
-        cardController.inArea = true;
-
-        if (!cardController.concluido)
+        if (collision.CompareTag("Card"))
         {
-            if (cardController.status.Trim().ToLower() == statusTask.Trim().ToLower())
-            {
-                CardSpawner cardSpawner = FindAnyObjectByType<CardSpawner>();
-                cardController.concluido = true;
-                Debug.Log($"cardController{cardController.status}");
-                cardController.inCorrectArea = true;
+            CardController cardController = collision.GetComponent<CardController>();
+            Debug.Log($"cardController{cardController.status}");
 
-                cardController.SetSpriteCorreto();
-                cardSpawner.SpawnNextCard();
-                gameManager.AddPoints();
-            }
-            else 
+            cardController.inArea = true;
+
+            if (!cardController.concluido)
             {
-                cardController.inCorrectArea = false;
-                cardController.SetSpriteErrado();
-                gameManager.RemovePoints();
+                if (cardController.status.Trim().ToLower() == statusTask.Trim().ToLower())
+                {
+                    CardSpawner cardSpawner = FindAnyObjectByType<CardSpawner>();
+                    cardController.concluido = true;
+                    Debug.Log($"cardController{cardController.status}");
+                    cardController.inCorrectArea = true;
+
+                    cardController.SetSpriteCorreto();
+                    cardSpawner.SpawnNextCard();
+                    gameManager.AddPoints();
+                }
+                else
+                {
+                    cardController.inCorrectArea = false;
+                    cardController.SetSpriteErrado();
+                    gameManager.RemovePoints();
+                }
             }
         }
     }
 
     private void OnTriggerExit2D(Collider2D collision)
     {
-        CardController cardController = collision.GetComponent<CardController>();
-
-        cardController.inArea = false;
-        cardController.inCorrectArea = false;
-        cardController.SetSpriteNeutro();
-
-        if (cardController.status.Trim().ToLower() == statusTask.Trim().ToLower())
+        if (collision.CompareTag("Card"))
         {
-            Debug.Log($"Card correto removido da área {statusTask}");
-            //cardController.concluido = false;
-            gameManager.RemovePoints();
+            CardController cardController = collision.GetComponent<CardController>();
+
+            cardController.inArea = false;
+            cardController.inCorrectArea = false;
+            cardController.SetSpriteNeutro();
+
+            if (cardController.status.Trim().ToLower() == statusTask.Trim().ToLower())
+            {
+                Debug.Log($"Card correto removido da área {statusTask}");
+                //cardController.concluido = false;
+                gameManager.RemovePoints();
+            }
         }
     }
 }

@@ -1,47 +1,45 @@
-using Photon.Pun;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class PlayerActions : MonoBehaviourPun
+public class PlayerActions : MonoBehaviour
 {
     private KeyCode interactable = KeyCode.E;
-    [SerializeField]private GameObject modalCompeticao;
-    public bool inCompetitionArea;
+
+    public GameObject intButton;
+    private CompetitionArea currentArea; // <-- área atual que o player está
+
     void Start()
-    { 
-        inCompetitionArea = false;
-        Scene actualSceneName = SceneManager.GetActiveScene();
-        if (actualSceneName.name  == "Rooms")
-        {
-            modalCompeticao = GameObject.FindGameObjectWithTag("ModalCompeticao");
-            modalCompeticao.SetActive(false);
-        }
+    {
+        currentArea = null;
+        intButton.SetActive(false);
     }
 
-    // Update is called once per frame
     void Update()
     {
-        if (!photonView.IsMine) return;
-
-        if (inCompetitionArea && Input.GetKeyDown(interactable))
+        if (currentArea != null && Input.GetKeyDown(interactable))
         {
-            modalCompeticao.SetActive(true);
+            currentArea.modalToOpen.SetActive(true);
         }
     }
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Competicao"))
+        if (collision.TryGetComponent(out CompetitionArea area))
         {
-            inCompetitionArea = true;
+            currentArea = area;
+            intButton.SetActive(true);
         }
     }
 
     private void OnTriggerExit2D(Collider2D collision)
     {
-        if (collision.CompareTag("Competicao"))
+        if (collision.TryGetComponent(out CompetitionArea area))
         {
-            inCompetitionArea = false;
+            if (area == currentArea)
+            {
+                currentArea = null;
+                intButton.SetActive(false);
+            }
         }
     }
 }

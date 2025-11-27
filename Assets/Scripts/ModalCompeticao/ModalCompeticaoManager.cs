@@ -1,21 +1,20 @@
 using System.Collections;
-using Photon.Pun;
-using Photon.Realtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class ModalCompeticaoManager : MonoBehaviourPunCallbacks
+public class ModalCompeticaoManager : MonoBehaviour
 {
     public GameObject modalCompeticao;
     public string gameTrello = "GameTrello";
-    PlayerMovement playerMovement;
-
-    private bool goingToMiniGame = false;
+    private PlayerMovement playerMovement;
 
     void Update()
     {
-        playerMovement = FindAnyObjectByType<PlayerMovement>();
+        // Encontrar o player só se ainda não pegou
+        if (playerMovement == null)
+            playerMovement = FindAnyObjectByType<PlayerMovement>();
 
+        // Fechar modal com ESC
         if (modalCompeticao.activeSelf && Input.GetKeyDown(KeyCode.Escape))
         {
             CloseModal();
@@ -29,62 +28,20 @@ public class ModalCompeticaoManager : MonoBehaviourPunCallbacks
 
     public void GoToScene()
     {
-        if (PhotonNetwork.InRoom)
+        if (playerMovement != null)
         {
+            // Salva posição do player antes de trocar de cena
             PlayerPrefs.SetFloat("PlayerX", playerMovement.playerPosition.position.x);
             PlayerPrefs.SetFloat("PlayerY", playerMovement.playerPosition.position.y);
             PlayerPrefs.Save();
+        }
 
-            goingToMiniGame = true; // sinaliza que a próxima sala é o minigame
-            PhotonNetwork.LeaveRoom(); //  sai da sala primeiro
-        }
-        else
-        {
-            Debug.LogWarning("O jogador não está em uma sala, indo direto para o minigame...");
-            JoinMiniGameRoom();
-        }
+        LoadMiniGame();
     }
 
-    // Chamado automaticamente quando o jogador sai da sala
-    public override void OnLeftRoom()
+    private void LoadMiniGame()
     {
-        Debug.Log("Saiu da sala atual. Voltando ao Master Server...");
-        StartCoroutine(WaitAndJoinMiniGame());
-    }
-
-    private IEnumerator WaitAndJoinMiniGame()
-    {
-        // Aguarda reconexão ao Master Server
-        while (PhotonNetwork.NetworkClientState != ClientState.ConnectedToMasterServer)
-        {
-            yield return null;
-        }
-
-        if (goingToMiniGame)
-        {
-            JoinMiniGameRoom();
-        }
-    }
-
-    private void JoinMiniGameRoom()
-    {
-        string roomName = "MiniGame_" + PhotonNetwork.LocalPlayer.UserId;
-        RoomOptions options = new RoomOptions { MaxPlayers = 1, IsVisible = false };
-
-        Debug.Log($"Criando ou entrando na sala: {roomName}");
-
-        // Desativa a sincronização automática de cena neste modo solo
-        PhotonNetwork.AutomaticallySyncScene = false;
-
-        PhotonNetwork.JoinOrCreateRoom(roomName, options, TypedLobby.Default);
-    }
-
-    public override void OnJoinedRoom()
-    {
-        if (PhotonNetwork.CurrentRoom.Name.StartsWith("MiniGame_"))
-        {
-            Debug.Log("Entrou no minigame, carregando cena GameTrello...");
-            PhotonNetwork.LoadLevel(gameTrello);
-        }
+        Debug.Log("Carregando cena GameTrello...");
+        SceneManager.LoadScene(gameTrello);
     }
 }

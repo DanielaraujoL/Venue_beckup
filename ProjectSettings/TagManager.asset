@@ -10,9 +10,8 @@ TagManager:
   - TrelloEmAndamento
   - TrelloConcluido
   - Spawnpoint
-  - Bullet
-  - Interactable
-  - ItemEstante
+  - Resposta
+  - Card
   layers:
   - Default
   - TransparentFX
